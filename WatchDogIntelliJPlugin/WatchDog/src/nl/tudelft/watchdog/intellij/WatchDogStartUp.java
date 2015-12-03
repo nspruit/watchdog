@@ -1,19 +1,31 @@
 package nl.tudelft.watchdog.intellij;
 
+import com.intellij.debugger.DebuggerManager;
+import com.intellij.debugger.DebuggerManagerEx;
+import com.intellij.debugger.engine.DebugProcess;
+import com.intellij.debugger.engine.SuspendContextImpl;
+import com.intellij.debugger.engine.evaluation.EvaluationListener;
+import com.intellij.debugger.impl.*;
+import com.intellij.execution.process.ProcessHandler;
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.actions.ViewToolWindowButtonsAction;
 import com.intellij.ide.plugins.PluginManager;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.ProjectComponent;
 import com.intellij.openapi.extensions.PluginId;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.wm.WindowManager;
+import com.intellij.xdebugger.impl.DebuggerSupport;
+import com.intellij.xdebugger.impl.breakpoints.ui.BreakpointPanelProvider;
+import com.sun.jdi.event.EventSet;
 import nl.tudelft.watchdog.core.logic.network.JsonTransferer;
 import nl.tudelft.watchdog.core.logic.network.ServerCommunicationException;
 import nl.tudelft.watchdog.core.ui.wizards.User;
 import nl.tudelft.watchdog.intellij.logic.InitializationManager;
 import nl.tudelft.watchdog.core.logic.ui.events.WatchDogEvent;
+import nl.tudelft.watchdog.intellij.logic.debug.DebugProcessListenerImpl;
 import nl.tudelft.watchdog.intellij.ui.preferences.Preferences;
 import nl.tudelft.watchdog.core.ui.preferences.ProjectPreferenceSetting;
 import nl.tudelft.watchdog.intellij.ui.wizards.projectregistration.ProjectRegistrationWizard;
@@ -22,12 +34,14 @@ import nl.tudelft.watchdog.core.util.WatchDogGlobals;
 import nl.tudelft.watchdog.core.util.WatchDogLogger;
 import nl.tudelft.watchdog.intellij.util.WatchDogUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
 import java.io.File;
+import java.io.OutputStream;
 
 public class WatchDogStartUp implements ProjectComponent {
 
@@ -56,6 +70,7 @@ public class WatchDogStartUp implements ProjectComponent {
     public void initComponent() {
         WatchDogUtils.setActiveProject(project);
         WatchDogGlobals.setLogDirectory(PluginManager.getPlugin(PluginId.findId("nl.tudelft.watchdog")).getPath().toString() + File.separator + "logs" + File.separator);
+        System.out.println("logdir: "+WatchDogGlobals.getLogDirectory());
         WatchDogGlobals.setPreferences(Preferences.getInstance());
         WatchDogGlobals.hostIDE = WatchDogGlobals.IDE.INTELLIJ;
     }
@@ -88,6 +103,61 @@ public class WatchDogStartUp implements ProjectComponent {
         checkIsProjectAlreadyRegistered();
         checkWhetherToDisplayProjectWizard();
         checkWhetherToStartWatchDog();
+
+        //extra
+        //DebuggerManager.getInstance(project).addDebugProcessListener(null);
+        DebuggerManagerEx.getInstanceEx(project).addDebuggerManagerListener(new DebuggerManagerListener() {
+            @Override
+            public void sessionCreated(DebuggerSession debuggerSession) {
+                WatchDogLogger.getInstance().logInfo("Debug session created: "+debuggerSession);
+//                debuggerSession.getXDebugSession().getDebugProcess().getBreakpointHandlers()[0].
+            }
+
+            @Override
+            public void sessionAttached(DebuggerSession debuggerSession) {
+                WatchDogLogger.getInstance().logInfo("Debug session attached: "+debuggerSession);
+            }
+
+            @Override
+            public void sessionDetached(DebuggerSession debuggerSession) {
+                WatchDogLogger.getInstance().logInfo("Debug session detached: "+debuggerSession);
+            }
+
+            @Override
+            public void sessionRemoved(DebuggerSession debuggerSession) {
+                WatchDogLogger.getInstance().logInfo("Debug session removed: "+debuggerSession);
+            }
+        });
+
+        DebuggerManagerEx.getInstanceEx(project).getContextManager().addListener(new DebuggerContextListener() {
+            @Override
+            public void changeEvent(@NotNull DebuggerContextImpl debuggerContext, DebuggerSession.Event event) {
+                WatchDogLogger.getInstance().logInfo("Change event: "+event);
+//                debuggerContext.getDebugProcess().addEvaluationListener(new EvaluationListener() {
+//                    @Override
+//                    public void evaluationStarted(SuspendContextImpl suspendContext) {
+//                       // EventSet set = suspendContext.getEventSet(); Why doesn't this worl
+//                    }
+//
+//                    @Override
+//                    public void evaluationFinished(SuspendContextImpl suspendContext) {
+//
+//                    }
+//                });
+            }
+        });
+
+        DebuggerSupport[] supports=com.intellij.debugger.ui.JavaDebuggerSupport.getDebuggerSupports();
+        for (DebuggerSupport support: supports){
+            support.getBreakpointPanelProvider().addListener(new BreakpointPanelProvider.BreakpointsListener() {
+                @Override
+                public void breakpointsChanged() {
+                    WatchDogLogger.getInstance().logInfo("Breakpoints changed, current breakpoints:\n\t"+DebuggerManagerEx.getInstanceEx(project).getBreakpointManager().getBreakpoints());
+                }
+            },project,null);
+        }
+
+//        DebuggerManagerEx.getInstanceEx(project).getBreakpointManager().
     }
 
     public void projectClosed() {

@@ -57,6 +57,7 @@ public class IntelliJListener {
 
         connection.subscribe(ApplicationActivationListener.TOPIC,
                 new IntelliJActivationListener(eventManager));
+
         activityListener = new GeneralActivityListener(eventManager, projectName);
 
         EditorFactory.getInstance().addEditorFactoryListener(editorWindowListener, parent);

@@ -2,9 +2,13 @@ package nl.tudelft.watchdog.eclipse.logic;
 
 import java.io.File;
 
+import org.eclipse.debug.core.DebugPlugin;
+
 import nl.tudelft.watchdog.core.logic.interval.IntervalPersisterBase;
 import nl.tudelft.watchdog.core.util.WatchDogGlobals;
 import nl.tudelft.watchdog.eclipse.Activator;
+import nl.tudelft.watchdog.eclipse.logic.debug.BreakpointListener;
+import nl.tudelft.watchdog.eclipse.logic.debug.DebugEventSetListener;
 import nl.tudelft.watchdog.eclipse.logic.interval.IntervalManager;
 import nl.tudelft.watchdog.eclipse.logic.interval.IntervalTransferManager;
 import nl.tudelft.watchdog.eclipse.logic.network.ClientVersionChecker;
@@ -36,9 +40,11 @@ public class InitializationManager {
 
 	/** Private constructor. */
 	private InitializationManager() {
-		WatchDogGlobals.setLogDirectory("watchdog" + File.separator + "logs"
-				+ File.separator);
+		WatchDogGlobals.setLogDirectory(
+				"watchdog" + File.separator + "logs" + File.separator);
 		WatchDogGlobals.setPreferences(Preferences.getInstance());
+		System.out.println("Logging enabled: "
+				+ Preferences.getInstance().isLoggingEnabled());
 		File baseFolder = Activator.getDefault().getStateLocation().toFile();
 		File toTransferDatabaseFile = new File(baseFolder, "intervals.mapdb");
 		File statisticsDatabaseFile = new File(baseFolder,
@@ -55,9 +61,14 @@ public class InitializationManager {
 		eventManager = new EventManager(intervalManager, USER_ACTIVITY_TIMEOUT);
 		new TimeSynchronityChecker(intervalManager, eventManager);
 
+		DebugPlugin.getDefault()
+				.addDebugEventListener(new DebugEventSetListener());
+		DebugPlugin.getDefault().getBreakpointManager()
+				.addBreakpointListener(new BreakpointListener());
+
 		WorkbenchListener workbenchListener = new WorkbenchListener(
-				eventManager, new IntervalTransferManager(
-						intervalsToTransferPersister,
+				eventManager,
+				new IntervalTransferManager(intervalsToTransferPersister,
 						WatchDogUtils.getWorkspaceName()));
 		workbenchListener.attachListeners();
 	}
