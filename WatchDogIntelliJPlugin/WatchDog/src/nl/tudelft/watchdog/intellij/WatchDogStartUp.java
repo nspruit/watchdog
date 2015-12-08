@@ -10,6 +10,7 @@ import com.intellij.execution.process.ProcessHandler;
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.actions.ViewToolWindowButtonsAction;
 import com.intellij.ide.plugins.PluginManager;
+import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.ProjectComponent;
 import com.intellij.openapi.extensions.PluginId;
@@ -105,59 +106,68 @@ public class WatchDogStartUp implements ProjectComponent {
         checkWhetherToStartWatchDog();
 
         //extra
-        //DebuggerManager.getInstance(project).addDebugProcessListener(null);
+        //////////////////////////////////////////////////
+        //////////     Null=>processhandler     //////////
+        //////////////////////////////////////////////////
+//        DebuggerManager.getInstance(project).addDebugProcessListener(null,new DebugProcessListenerImpl());
+
         DebuggerManagerEx.getInstanceEx(project).addDebuggerManagerListener(new DebuggerManagerListener() {
             @Override
             public void sessionCreated(DebuggerSession debuggerSession) {
                 WatchDogLogger.getInstance().logInfo("Debug session created: "+debuggerSession);
-//                debuggerSession.getXDebugSession().getDebugProcess().getBreakpointHandlers()[0].
+                debuggerSession.getProcess().addDebugProcessListener(new DebugProcessListenerImpl());
             }
 
             @Override
             public void sessionAttached(DebuggerSession debuggerSession) {
-                WatchDogLogger.getInstance().logInfo("Debug session attached: "+debuggerSession);
+//                WatchDogLogger.getInstance().logInfo("Debug session attached: "+debuggerSession);
             }
 
             @Override
             public void sessionDetached(DebuggerSession debuggerSession) {
-                WatchDogLogger.getInstance().logInfo("Debug session detached: "+debuggerSession);
+//                WatchDogLogger.getInstance().logInfo("Debug session detached: "+debuggerSession);
             }
 
             @Override
             public void sessionRemoved(DebuggerSession debuggerSession) {
-                WatchDogLogger.getInstance().logInfo("Debug session removed: "+debuggerSession);
+//                WatchDogLogger.getInstance().logInfo("Debug session removed: "+debuggerSession);
             }
         });
-
-        DebuggerManagerEx.getInstanceEx(project).getContextManager().addListener(new DebuggerContextListener() {
-            @Override
-            public void changeEvent(@NotNull DebuggerContextImpl debuggerContext, DebuggerSession.Event event) {
-                WatchDogLogger.getInstance().logInfo("Change event: "+event);
-//                debuggerContext.getDebugProcess().addEvaluationListener(new EvaluationListener() {
-//                    @Override
-//                    public void evaluationStarted(SuspendContextImpl suspendContext) {
-//                       // EventSet set = suspendContext.getEventSet(); Why doesn't this worl
-//                    }
 //
-//                    @Override
-//                    public void evaluationFinished(SuspendContextImpl suspendContext) {
+//        DebuggerManagerEx.getInstanceEx(project).getContextManager().addListener(new DebuggerContextListener() {
+//            @Override
+//            public void changeEvent(@NotNull DebuggerContextImpl debuggerContext, DebuggerSession.Event event) {
+//                WatchDogLogger.getInstance().logInfo("Change event: "+event);
+////                debuggerContext.getDebugProcess().addEvaluationListener(new EvaluationListener() {
+////                    @Override
+////                    public void evaluationStarted(SuspendContextImpl suspendContext) {
+////                       // EventSet set = suspendContext.getEventSet(); Why doesn't this worl
+////                    }
+////
+////                    @Override
+////                    public void evaluationFinished(SuspendContextImpl suspendContext) {
+////
+////                    }
+////                });
+//            }
+//        });
 //
-//                    }
-//                });
-            }
-        });
+//        DebuggerSupport[] supports=com.intellij.debugger.ui.JavaDebuggerSupport.getDebuggerSupports();
+//        for (DebuggerSupport support: supports){
+//            support.getBreakpointPanelProvider().addListener(new BreakpointPanelProvider.BreakpointsListener() {
+//                @Override
+//                public void breakpointsChanged() {
+//                    WatchDogLogger.getInstance().logInfo("Breakpoints changed, current breakpoints:\n\t" + DebuggerManagerEx.getInstanceEx(project).getBreakpointManager().getBreakpoints());
+//                }
+//            }, project, new Disposable() {
+//                @Override
+//                public void dispose() {
+//                    //intentionally left empty
+//                }
+//            });
+//        }
+        //SEE IJ forum
 
-        DebuggerSupport[] supports=com.intellij.debugger.ui.JavaDebuggerSupport.getDebuggerSupports();
-        for (DebuggerSupport support: supports){
-            support.getBreakpointPanelProvider().addListener(new BreakpointPanelProvider.BreakpointsListener() {
-                @Override
-                public void breakpointsChanged() {
-                    WatchDogLogger.getInstance().logInfo("Breakpoints changed, current breakpoints:\n\t"+DebuggerManagerEx.getInstanceEx(project).getBreakpointManager().getBreakpoints());
-                }
-            },project,null);
-        }
-
-//        DebuggerManagerEx.getInstanceEx(project).getBreakpointManager().
     }
 
     public void projectClosed() {

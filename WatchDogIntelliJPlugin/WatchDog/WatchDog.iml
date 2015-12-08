@@ -47,6 +47,5 @@
       </library>
     </orderEntry>
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="tools" level="project" />
   </component>
 </module>
